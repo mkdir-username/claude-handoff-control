@@ -137,6 +137,17 @@ first call, and 200–1 700 output tokens — most of it thinking before the ver
 (4 output tokens). The judge runs once per turn end, plus once for a continuation after a block.
 Multiply by your DeepSeek rate for the price.
 
+In real use, over 16 days of my own work (14–29 Sep 2026), the controller judged **2 309 turns for
+about $2.06** (range $0.58–$3.04), roughly **$0.89 per 1 000 turns** and about a third of the whole
+DeepSeek bill of that account ($6.68):
+
+![Daily spend: whole DeepSeek account vs. the controller](docs/spend.svg)
+
+The grey bars are DeepSeek's billing export for the account, which also pays for other tools on
+the same key. The green bars are an estimate: controller calls per day, counted from a local proxy
+log, times the per-call token profile measured above, times that day's billed token prices. Almost
+all of a turn's cost is output tokens (thinking plus the verdict); the cached rubric is nearly free.
+
 ## Limitations
 
 - The judge sees only the current turn. Work done a turn earlier is invisible to it — hence the

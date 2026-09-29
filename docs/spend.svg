@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 330" width="860" height="330" role="img" aria-label="Daily DeepSeek spend: whole account vs. the handoff controller, 14–29 Sep 2026">
+<style>
+svg{--bg:#ffffff;--fg:#1c2320;--muted:#66706b;--rule:#d9ddd8;--acc:#c9cfc9;--ctl:#1f7a5c;--warn:#b8692a}
+@media (prefers-color-scheme:dark){svg{--bg:#0d1117;--fg:#e6ebe7;--muted:#95a09a;--rule:#2d3531;--acc:#3a433e;--ctl:#4cc79a;--warn:#e0955a}}
+text{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;fill:var(--muted)}
+.t{font:600 15px -apple-system,Segoe UI,Helvetica,Arial,sans-serif;fill:var(--fg)}
+.l{font:12px -apple-system,Segoe UI,Helvetica,Arial,sans-serif;fill:var(--muted)}
+</style>
+<rect width="860" height="330" fill="var(--bg)"/>
+<text x="16" y="24" class="t">Daily spend, 14–29 Sep 2026: whole DeepSeek account vs. the controller</text>
+<rect x="16" y="38" width="11" height="11" fill="var(--acc)"/><text x="33" y="48" class="l">Account total (billing export)</text>
+<rect x="225" y="38" width="11" height="11" fill="var(--ctl)"/><text x="242" y="48" class="l">Controller, estimate</text>
+<rect x="385" y="43" width="11" height="2" fill="var(--fg)"/><text x="402" y="48" class="l">Range: 200–1 700 output tokens per call</text>
+<line x1="52" x2="848" y1="302.0" y2="302.0" stroke="var(--rule)"/><text x="44" y="306.0" text-anchor="end">$0.0</text>
+<line x1="52" x2="848" y1="244.0" y2="244.0" stroke="var(--rule)"/><text x="44" y="248.0" text-anchor="end">$0.3</text>
+<line x1="52" x2="848" y1="186.0" y2="186.0" stroke="var(--rule)"/><text x="44" y="190.0" text-anchor="end">$0.6</text>
+<line x1="52" x2="848" y1="128.0" y2="128.0" stroke="var(--rule)"/><text x="44" y="132.0" text-anchor="end">$0.9</text>
+<line x1="52" x2="848" y1="70.0" y2="70.0" stroke="var(--rule)"/><text x="44" y="74.0" text-anchor="end">$1.2</text>
+<rect x="61.5" y="207.6" width="30.8" height="94.4" fill="var(--acc)"/>
+<rect x="61.5" y="271.6" width="30.8" height="30.4" fill="var(--ctl)"/>
+<path d="M76.9 256.0V295.1M72.9 256.0h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="76.9" y="320" text-anchor="middle">Sep 14</text>
+<rect x="111.2" y="240.2" width="30.8" height="61.8" fill="var(--acc)"/>
+<rect x="111.2" y="281.0" width="30.8" height="21.0" fill="var(--ctl)"/>
+<path d="M126.6 270.2V297.1M122.6 270.2h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<rect x="161.0" y="236.4" width="30.8" height="65.6" fill="var(--acc)"/>
+<rect x="161.0" y="274.4" width="30.8" height="27.6" fill="var(--ctl)"/>
+<path d="M176.4 260.3V295.5M172.4 260.3h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="176.4" y="320" text-anchor="middle">Sep 16</text>
+<rect x="210.7" y="186.9" width="30.8" height="115.1" fill="var(--acc)"/>
+<rect x="210.7" y="250.8" width="30.8" height="51.2" fill="var(--ctl)"/>
+<path d="M226.1 224.7V290.0M222.1 224.7h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<rect x="260.5" y="201.3" width="30.8" height="100.7" fill="var(--acc)"/>
+<rect x="260.5" y="261.1" width="30.8" height="40.9" fill="var(--ctl)"/>
+<path d="M275.9 240.2V292.4M271.9 240.2h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="275.9" y="320" text-anchor="middle">Sep 18</text>
+<rect x="310.2" y="268.8" width="30.8" height="33.2" fill="var(--acc)"/>
+<rect x="310.2" y="291.4" width="30.8" height="10.6" fill="var(--ctl)"/>
+<path d="M325.6 285.9V299.5M321.6 285.9h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<rect x="360.0" y="280.4" width="30.8" height="21.6" fill="var(--acc)"/>
+<rect x="360.0" y="295.7" width="30.8" height="6.3" fill="var(--ctl)"/>
+<path d="M375.4 292.5V300.5M371.4 292.5h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="375.4" y="320" text-anchor="middle">Sep 20</text>
+<rect x="409.7" y="260.6" width="30.8" height="41.4" fill="var(--acc)"/>
+<rect x="409.7" y="282.1" width="30.8" height="19.9" fill="var(--ctl)"/>
+<path d="M425.1 271.9V297.3M421.1 271.9h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<rect x="459.5" y="242.6" width="30.8" height="59.4" fill="var(--acc)"/>
+<rect x="459.5" y="273.5" width="30.8" height="28.5" fill="var(--ctl)"/>
+<path d="M474.9 259.8V294.2M470.9 259.8h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="474.9" y="320" text-anchor="middle">Sep 22</text>
+<rect x="509.2" y="241.5" width="30.8" height="60.5" fill="var(--acc)"/>
+<rect x="509.2" y="271.5" width="30.8" height="30.5" fill="var(--ctl)"/>
+<path d="M524.6 257.3V292.8M520.6 257.3h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<rect x="559.0" y="242.9" width="30.8" height="59.1" fill="var(--acc)"/>
+<rect x="559.0" y="284.9" width="30.8" height="17.1" fill="var(--ctl)"/>
+<path d="M574.4 276.3V297.7M570.4 276.3h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="574.4" y="320" text-anchor="middle">Sep 24</text>
+<rect x="608.7" y="238.3" width="30.8" height="63.7" fill="var(--acc)"/>
+<rect x="608.7" y="273.5" width="30.8" height="28.5" fill="var(--ctl)"/>
+<path d="M624.1 261.5V291.6M620.1 261.5h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<rect x="658.5" y="209.2" width="30.8" height="92.8" fill="var(--acc)"/>
+<rect x="658.5" y="296.0" width="30.8" height="6.0" fill="var(--ctl)"/>
+<path d="M673.9 293.0V300.5M669.9 293.0h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="673.9" y="320" text-anchor="middle">Sep 26</text>
+<rect x="708.2" y="88.6" width="30.8" height="213.4" fill="var(--acc)"/>
+<rect x="708.2" y="288.8" width="30.8" height="13.2" fill="var(--ctl)"/>
+<path d="M723.6 282.2V298.7M719.6 282.2h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<rect x="758.0" y="194.6" width="30.8" height="107.4" fill="var(--acc)"/>
+<rect x="758.0" y="264.5" width="30.8" height="37.5" fill="var(--ctl)"/>
+<path d="M773.4 250.8V285.2M769.4 250.8h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="773.4" y="320" text-anchor="middle">Sep 28</text>
+<rect x="807.7" y="200.9" width="30.8" height="101.1" fill="var(--acc)"/>
+<rect x="807.7" y="273.2" width="30.8" height="28.8" fill="var(--ctl)"/>
+<path d="M823.1 260.8V291.8M819.1 260.8h8" stroke="var(--fg)" stroke-width="1.5" fill="none"/>
+<text x="692.8" y="100.6" text-anchor="end" style="fill:var(--warn)">71M cached tokens elsewhere →</text>
+</svg>
