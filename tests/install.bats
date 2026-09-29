@@ -89,3 +89,21 @@ cmds() { jq -r --arg e "$1" '[.hooks[$e][]?.hooks[]?.command] | .[]' "$S"; }
   [ -d "$DEST/hooks" ]
   [ "$(jq -r .hooks "$S")" = "not-an-object" ]
 }
+
+@test "install --notify adds the Notification and done-Stop hooks, once" {
+  bash "$REPO/install.sh" --notify >/dev/null
+  bash "$REPO/install.sh" --notify >/dev/null
+  [ "$(cmds Notification)" = "bash \"$DEST/hooks/notify-notification.sh\"" ]
+  [ "$(cmds Stop | wc -l | tr -d ' ')" -eq 2 ]
+  cmds Stop | grep -qx "bash \"$DEST/hooks/notify-stop-done.sh\""
+  [ -x "$DEST/hooks/lib/ghostty-focus-session" ]
+}
+
+@test "install without --notify registers no status hooks; uninstall removes them all" {
+  bash "$REPO/install.sh" >/dev/null
+  [ -z "$(cmds Notification)" ]
+  bash "$REPO/install.sh" --notify >/dev/null
+  bash "$REPO/uninstall.sh" >/dev/null
+  [ -z "$(cmds Notification)" ]
+  [ -z "$(cmds Stop)" ]
+}

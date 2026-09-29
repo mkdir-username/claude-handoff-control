@@ -1053,3 +1053,54 @@ FLAG_OK='Removed video_h.
   done < "$FX/expected.tsv"
   [ "$fails" -eq 0 ]
 }
+
+# --- notifications: every forced return is visible ---
+
+notify_stub() {
+  printf '#!/bin/sh\nprintf "%%s\\n" "$@" > "%s/n.txt"\n' "$BATS_TEST_TMPDIR" > "$BATS_TEST_TMPDIR/send"
+  chmod +x "$BATS_TEST_TMPDIR/send"
+  export HANDOFF_CTL_NOTIFY_CMD="$BATS_TEST_TMPDIR/send"
+  export HANDOFF_CTL_NOTIFY_LOG="$BATS_TEST_TMPDIR/notify.jsonl"
+}
+sent() { for _ in 1 2 3 4 5 6 7 8 9 10; do [ -s "$BATS_TEST_TMPDIR/n.txt" ] && break; sleep 0.1; done; cat "$BATS_TEST_TMPDIR/n.txt"; }
+
+@test "notify: a returned turn raises a HANDOFF notification with the reason" {
+  notify_stub
+  mkcontrol "$(verdict MISSED_ACTION 0.95 'announced the tests and stopped' 'Run the tests')"
+  run run_hook '👉 Next: running the tests.'
+  echo "$output" | jq -e '.decision == "block"'
+  run sent
+  [ "${lines[1]}" = handoff ]
+  [ "${lines[2]}" = "🛑 HANDOFF  ·  Missed action" ]
+  [ "${lines[3]}" = "announced the tests and stopped" ]
+}
+
+@test "notify: an OK turn raises nothing" {
+  notify_stub
+  mkcontrol "$(verdict OK 0.95)"
+  run run_hook 'Done, 11 of 11 tests green.'
+  sleep 0.3
+  [ ! -e "$BATS_TEST_TMPDIR/n.txt" ]
+}
+
+@test "notify: an unmet obligation raises 'Promise not kept'" {
+  notify_stub
+  mkcontrol "$(verdict MISSED_ACTION 0.95 'announced a step' 'Finish the build now')"
+  run_hook '👉 Next: finishing the build.' >/dev/null
+  rm -f "$BATS_TEST_TMPDIR/n.txt"
+  mkcontrol2 "$(verdict OK 0.9)" "$(obligation false 'never started the build')"
+  run run_hook 'I will tell you about the build later.'
+  run sent
+  [ "${lines[2]}" = "🛑 HANDOFF  ·  Promise not kept" ]
+  [[ "${lines[3]}" == *"Finish the build now"* ]]
+}
+
+@test "notify: a silent judge raises 'Judge unreachable' together with the warning" {
+  notify_stub
+  export HANDOFF_CTL_CMD=/nonexistent/controller
+  run run_hook 'a'
+  run run_hook 'b'
+  echo "$output" | jq -e '.systemMessage | test("unreachable")'
+  run sent
+  [ "${lines[2]}" = "🛑 HANDOFF  ·  Judge unreachable" ]
+}

@@ -178,6 +178,21 @@ FAILS=$(printf '%s' "$TURN" | jq -r '
 # "the agent did not try", so the difference must be spelled out.
 [ -n "$TURN" ] || FAILS="turn transcript unavailable — absence of failures cannot be judged"
 
+# Every forced return raises a notification: the judge can be wrong, and you should see it act
+# even when you are away from the terminal. No-op outside macOS or with HANDOFF_CTL_NOTIFY=0.
+source "$HOOK_DIR/lib/session-notify.sh" 2>/dev/null || session_notify() { :; }
+handoff_notify() {   # <verdict> <text>
+  local what
+  case "$1" in
+    MISSED_ACTION)  what="Missed action" ;;
+    DUMB_QUESTION)  what="Needless question" ;;
+    UNFLAGGED_RISK) what="Unflagged risk" ;;
+    OBLIGATION)     what="Promise not kept" ;;
+    *)              what="$1" ;;
+  esac
+  session_notify "${TRANSCRIPT:-}" handoff "$what" "$2"
+}
+
 # Fail-open is silent: a dead endpoint would let every turn pass unchecked for hours. A single
 # network blip is not noise-worthy — warn from the second miss in a row, at most every 30 minutes.
 CTL_DOWN_FILE="${HANDOFF_CTL_DOWN_FILE:-$STATE_DIR/ctl-down}"
@@ -200,8 +215,9 @@ ctl_down() {
   if [ "$n" -ge 2 ] && [ $(( now - warned )) -ge 1800 ]; then
     warned=$now
     at=$(date -d "@$since" +%H:%M 2>/dev/null || date -r "$since" +%H:%M 2>/dev/null)
-    jq -nc --arg m "⚠️ handoff-control: judge unreachable $n times in a row since $at — turns go unchecked. Check HANDOFF_CTL_API_KEY / HANDOFF_CTL_API_URL / HANDOFF_CTL_MODEL.${CTL_ERR:+ Last error: $CTL_ERR}" \
-      '{systemMessage:$m}'
+    local m="⚠️ handoff-control: judge unreachable $n times in a row since $at — turns go unchecked. Check HANDOFF_CTL_API_KEY / HANDOFF_CTL_API_URL / HANDOFF_CTL_MODEL.${CTL_ERR:+ Last error: $CTL_ERR}"
+    handoff_notify "Judge unreachable" "$m"
+    jq -nc --arg m "$m" '{systemMessage:$m}'
   fi
   mkdir -p "$(dirname "$CTL_DOWN_FILE")" 2>/dev/null
   echo "$n $since $warned" > "$CTL_DOWN_FILE" 2>/dev/null
@@ -313,6 +329,7 @@ if [ "$CONTINUED" = "0" ] && [ -s "$OBL_FILE" ]; then
   jq -nc --arg a "$OBL_ACTION" --arg w "$OBL_WHY" --argjson t "$OBL_SET" --argjson i "$OBL_ITER" \
     '{action:$a, why:$w, set_at:$t, iterations:$i}' > "$OBL_FILE" 2>/dev/null
   obl_record unmet "$OBL_REASON" true
+  handoff_notify OBLIGATION "$OBL_ACTION"
   : > "$STATE_DIR/$SESSION_ID.by-control"
 
   jq -n --arg r "OBLIGATION FROM THE PREVIOUS TURN IS NOT CLOSED (hook stop-handoff-control, attempt $OBL_ITER):
@@ -560,5 +577,6 @@ and only then hand the turn back."
 $DANGER_PROTOCOL"
 fi
 
+handoff_notify "$VERDICT" "$WHY"
 jq -n --arg r "$REASON" '{decision:"block", reason:$r}'
 exit 0

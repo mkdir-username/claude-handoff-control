@@ -3,6 +3,14 @@
 # ~/.claude/settings.json. Idempotent; backs up settings.json before changing it.
 set -euo pipefail
 
+NOTIFY=0
+for a in "$@"; do
+  case "$a" in
+    --notify) NOTIFY=1 ;;
+    *) echo "install: unknown option '$a' (supported: --notify)" >&2; exit 1 ;;
+  esac
+done
+
 for tool in jq curl python3 perl; do
   command -v "$tool" >/dev/null 2>&1 || { echo "install: '$tool' is required but not found in PATH" >&2; exit 1; }
 done
@@ -19,16 +27,19 @@ jq -e 'type == "object"' "$SETTINGS" >/dev/null 2>&1 \
 mkdir -p "$DEST"
 rm -rf "$DEST/hooks" "$DEST/rubrics"
 cp -R "$SRC/hooks" "$SRC/rubrics" "$DEST/"
-chmod +x "$DEST"/hooks/*.sh
+chmod +x "$DEST"/hooks/*.sh "$DEST"/hooks/lib/ghostty-focus-session
 
 cp "$SETTINGS" "$SETTINGS.bak-$(date +%Y%m%d%H%M%S)"
 
 STOP="bash \"$DEST/hooks/stop-handoff-control.sh\""
 CACHE="bash \"$DEST/hooks/prompt-cache.sh\""
 LESSON="bash \"$DEST/hooks/lesson-surface.sh\""
+NOTIF="bash \"$DEST/hooks/notify-notification.sh\""
+DONE="bash \"$DEST/hooks/notify-stop-done.sh\""
 
 TMP=$(mktemp)
-jq --arg stop "$STOP" --arg cache "$CACHE" --arg lesson "$LESSON" '
+jq --arg stop "$STOP" --arg cache "$CACHE" --arg lesson "$LESSON" \
+   --arg notif "$NOTIF" --arg done "$DONE" --argjson notify "$NOTIFY" '
   def add($event; $cmd; $timeout):
     if ([.hooks[$event][]?.hooks[]?.command] | index($cmd)) then .
     else .hooks[$event] = ((.hooks[$event] // []) + [{hooks:[{type:"command", command:$cmd, timeout:$timeout}]}])
@@ -37,6 +48,7 @@ jq --arg stop "$STOP" --arg cache "$CACHE" --arg lesson "$LESSON" '
   | add("Stop"; $stop; 120)
   | add("UserPromptSubmit"; $cache; 10)
   | add("UserPromptSubmit"; $lesson; 10)
+  | if $notify == 1 then add("Notification"; $notif; 10) | add("Stop"; $done; 10) else . end
 ' "$SETTINGS" > "$TMP" || { rm -f "$TMP"; echo "install: could not update $SETTINGS" >&2; exit 1; }
 mv "$TMP" "$SETTINGS"
 
@@ -48,5 +60,7 @@ Next: give the judge an API key, e.g. in your shell profile:
   export DEEPSEEK_API_KEY=sk-...             # or HANDOFF_CTL_API_KEY
 Optional: HANDOFF_CTL_MODEL (default deepseek-flash), HANDOFF_CTL_API_URL — any Anthropic
 Messages–compatible endpoint.
+Every forced return raises a macOS notification (Ghostty tab on click); HANDOFF_CTL_NOTIFY=0 mutes it.
+Other session statuses (permission, waiting, turn finished): ./install.sh --notify
 Restart Claude Code for the hooks to load.
 MSG

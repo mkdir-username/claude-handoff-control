@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Brings forward the Ghostty tab that runs a Claude Code session.
+# ghostty-focus-session <transcript.jsonl> [tty]
+# Main path — by tty: a one-off OSC marker is written into the terminal title, Ghostty returns the
+# id of the terminal carrying it, and the old name is put back at once. Ghostty's AppleScript
+# exposes neither tty nor pid, and the title is not unique: two sessions with one ai-title, or a
+# session without one, sent the click to the wrong tab.
+# Fallback — by the title contained in the terminal name (Claude Code prefixes a status mark);
+# the title is read from the transcript at click time, so a /rename in between does not matter.
+# Nothing found — just activates Ghostty.
+set -uo pipefail
+export PATH="${PATH:+$PATH:}/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+source "$(cd "$(dirname "$0")" && pwd)/session-notify.sh"
+
+tr="${1:-}" tty="${2:-}" dev="${GFS_DEV_DIR:-/dev}"
+
+log_click() {   # <method> <result>
+  local nlog="${HANDOFF_CTL_NOTIFY_LOG:-${HANDOFF_CTL_HOME:-$HOME/.claude/handoff-control}/notify.jsonl}"
+  jq -nc --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg m "$1" --arg r "$2" --arg t "$tty" \
+    --arg s "$(basename "${tr:-none}" .jsonl)" \
+    '{ts:$ts,click:true,method:$m,result:$r,tty:$t,session:$s}' >> "$nlog" 2>/dev/null
+}
+
+focus_by_tty() {
+  [ -n "$tty" ] && [ -w "$dev/$tty" ] || return 1
+  local snap tok id="" i old
+  snap=$(osascript -e 'set o to ""' -e 'set T to character id 9' \
+    -e 'tell application "Ghostty" to repeat with s in terminals' \
+    -e 'set o to o & (id of s) & T & (name of s) & linefeed' \
+    -e 'end repeat' -e 'return o' 2>/dev/null) || return 1
+  tok="cc-focus-$$-$RANDOM"
+  printf '\033]2;%s\007' "$tok" >> "$dev/$tty" 2>/dev/null || return 1
+  for (( i = 0; i < ${GFS_TTY_TRIES:-20}; i++ )); do
+    id=$(osascript -e 'on run argv' -e 'tell application "Ghostty"' \
+      -e 'repeat with s in terminals' \
+      -e 'if name of s contains (item 1 of argv) then return id of s' \
+      -e 'end repeat' -e 'end tell' -e 'return ""' -e 'end run' "$tok" 2>/dev/null)
+    [ -n "$id" ] && break
+    sleep 0.05
+  done
+  [ -n "$id" ] || return 1
+  old=$(awk -F'\t' -v id="$id" '$1 == id { print $2; exit }' <<<"$snap")
+  printf '\033]2;%s\007' "$old" >> "$dev/$tty" 2>/dev/null
+  osascript -e 'on run argv' -e 'tell application "Ghostty"' -e 'activate' \
+    -e 'focus (first terminal whose id is (item 1 of argv))' \
+    -e 'end tell' -e 'return "focused"' -e 'end run' "$id" >/dev/null 2>&1
+}
+
+if focus_by_tty; then
+  log_click tty focused
+  echo focused
+  exit 0
+fi
+
+res=$(osascript -e 'on run argv' \
+  -e 'tell application "Ghostty"' \
+  -e 'activate' \
+  -e 'repeat with w in windows' \
+  -e 'repeat with t in tabs of w' \
+  -e 'repeat with s in terminals of t' \
+  -e 'if name of s contains (item 1 of argv) then' \
+  -e 'focus s' \
+  -e 'return "focused"' \
+  -e 'end if' \
+  -e 'end repeat' \
+  -e 'end repeat' \
+  -e 'end repeat' \
+  -e 'end tell' \
+  -e 'return "not found"' \
+  -e 'end run' "$(session_title "$tr")")
+log_click title "$res"
+echo "$res"

@@ -2,11 +2,14 @@
 
 Made by and for developers tired of answering the obvious.
 
-A coding agent keeps handing the turn back with questions it could settle itself:
+A coding agent keeps handing the turn back with questions it could settle itself.
+Real last lines from my judge log, translated from Russian:
 
-- *"Want me to run the tests?"*
-- *"👉 Next: adding unit tests."*
-- *"You may want to check whether the service is running."*
+- *"Fix it? Waiting for your call."*
+- *"Do both, or only the test isolation?"*
+- *"👉 Next: writing the failing test A2."* — and the turn ends right there.
+- *"Say the word and I'll run it."*
+- *"Shorten MEMORY.md or leave it as is?"*
 
 Each one pulls you back to the terminal for a one-word "yes".
 Step away, and that is an hour of nothing.
@@ -23,6 +26,7 @@ and you spend the time on strategy — or on your own things.
 - **Where it still stops** — irreversible steps, real forks, anything only a human can do.
 - **Cost** — about $0.89 per 1 000 judged turns in 16 days of real use.
 - **Safe by default** — one return per chain; any judge failure lets the turn end normally.
+  Every forced return rings a macOS notification, so you always know when the judge acted.
 - **Setup** — mine: Claude Opus as the agent, `deepseek-flash` as the judge. Adapt it to yours.
 
 ## Quick start
@@ -118,6 +122,22 @@ Guards:
   It never becomes an obligation.
 
 </details>
+
+---
+
+## Notifications: every forced return is visible
+
+The judge can be wrong. So each time it returns a turn, you hear and see it — even away from the terminal.
+
+- **🛑 HANDOFF** — always on. Plays Sosumi ×3 and shows the verdict and the judge's reason.
+  Also fires for an unmet promise and when the judge is unreachable.
+- **Click → the right tab** — the banner focuses the Ghostty tab of that session.
+  Found by the session's tty, not by its title, so two sessions with one name do not mix.
+- **Other statuses** — `./install.sh --notify` adds 🟡 WARN (permission, input needed),
+  🔵 INFO (waiting for you) and 🟢 DONE (turn finished). These stay quiet while the tab is in front.
+- **Where it works** — macOS. `terminal-notifier` enables click-to-focus; without it a plain
+  banner is shown. On other systems it is a silent no-op.
+- **Log and off switch** — every banner is a line in `notify.jsonl`; `HANDOFF_CTL_NOTIFY=0` mutes all.
 
 ---
 
@@ -219,6 +239,10 @@ raise `HANDOFF_CTL_THRESHOLD` if that is too eager for you.
 | `HANDOFF_CTL_CALIB_KEY` · `HANDOFF_CTL_CALIB_MODEL` · `HANDOFF_CTL_CALIB_TIMEOUT` | judge key · judge model · `10` | Calibrator overrides |
 | `HANDOFF_CTL_CMD` · `HANDOFF_CTL_CALIB_CMD` | — | Replace the judge/calibrator with a command (tests, custom transports) |
 | `HANDOFF_CTL_DOWN_FILE` | `$HANDOFF_CTL_HOME/state/ctl-down` | Consecutive-failure counter |
+| `HANDOFF_CTL_NOTIFY` | `1` | `0` mutes every notification |
+| `HANDOFF_CTL_NOTIFY_SOUND` | `Sosumi` | System sound for HANDOFF, played 3 times |
+| `HANDOFF_CTL_NOTIFY_LOG` | `$HANDOFF_CTL_HOME/notify.jsonl` | Log of sent notifications and clicks |
+| `HANDOFF_CTL_NOTIFY_CMD` · `HANDOFF_CTL_NOTIFY_TTY` | — | Replace sending with a command; force the session tty (tests) |
 
 </details>
 
