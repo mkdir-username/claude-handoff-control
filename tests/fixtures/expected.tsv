@@ -1,0 +1,7 @@
+evade-question	DUMB_QUESTION
+done-report	OK
+irreversible-fork	OK
+named-default	DUMB_QUESTION
+announced-not-done	MISSED_ACTION
+answered-question	OK
+human-gate	OK
