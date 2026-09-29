@@ -181,7 +181,14 @@ FAILS=$(printf '%s' "$TURN" | jq -r '
 # Fail-open is silent: a dead endpoint would let every turn pass unchecked for hours. A single
 # network blip is not noise-worthy — warn from the second miss in a row, at most every 30 minutes.
 CTL_DOWN_FILE="${HANDOFF_CTL_DOWN_FILE:-$STATE_DIR/ctl-down}"
+CTL_ERR=""
 ctl_up() { rm -f "$CTL_DOWN_FILE" 2>/dev/null; }
+# An error body (bad key, unknown model, overload) is a non-empty answer, so without this check a
+# wrong key would pass every turn unchecked and never trigger the warning.
+ctl_check() {   # <raw response>
+  CTL_ERR=$(printf '%s' "$1" | jq -r 'select(type=="object" and has("error")) | (.error.message // .error.type // "error")' 2>/dev/null)
+  [ -z "$CTL_ERR" ] || ctl_down
+}
 ctl_down() {
   local now n=0 since="" warned=0 at
   now=$(date +%s)
@@ -193,7 +200,7 @@ ctl_down() {
   if [ "$n" -ge 2 ] && [ $(( now - warned )) -ge 1800 ]; then
     warned=$now
     at=$(date -d "@$since" +%H:%M 2>/dev/null || date -r "$since" +%H:%M 2>/dev/null)
-    jq -nc --arg m "⚠️ handoff-control: judge unreachable $n times in a row since $at — turns go unchecked. Check HANDOFF_CTL_API_KEY / HANDOFF_CTL_API_URL." \
+    jq -nc --arg m "⚠️ handoff-control: judge unreachable $n times in a row since $at — turns go unchecked. Check HANDOFF_CTL_API_KEY / HANDOFF_CTL_API_URL / HANDOFF_CTL_MODEL.${CTL_ERR:+ Last error: $CTL_ERR}" \
       '{systemMessage:$m}'
   fi
   mkdir -p "$(dirname "$CTL_DOWN_FILE")" 2>/dev/null
@@ -265,6 +272,7 @@ if [ "$CONTINUED" = "0" ] && [ -s "$OBL_FILE" ]; then
 
   OBL_RAW=$(printf '%s' "$OBL_BODY" | ask_controller 2>/dev/null) || ctl_down
   [ -n "$OBL_RAW" ] || ctl_down
+  ctl_check "$OBL_RAW"
   ctl_up
   OBL_JSON=$(printf '%s' "$OBL_RAW" \
     | jq -r '[.content[]? | select(.type=="text") | .text] | join("")' 2>/dev/null) || exit 0
@@ -333,6 +341,7 @@ BODY=$(jq -n --rawfile rubric "$RUBRIC" --rawfile final "$TMP_FINAL" \
 
 RAW=$(printf '%s' "$BODY" | ask_controller 2>/dev/null) || ctl_down
 [ -n "$RAW" ] || ctl_down
+ctl_check "$RAW"
 ctl_up
 
 VERDICT_JSON=$(printf '%s' "$RAW" \

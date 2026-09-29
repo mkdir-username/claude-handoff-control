@@ -184,6 +184,16 @@ in_cascade() { : > "$ST/t1.by-control"; echo "$1" > "$ST/t1.cascade"; }
   [ -z "$output" ]
 }
 
+@test "API error body (bad key) counts as judge down and surfaces the warning" {
+  mkcontrol '{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}'
+  run run_hook 'Continue?'
+  [ -z "$output" ]
+  run run_hook 'Continue?'
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.systemMessage | test("invalid x-api-key")'
+  ! echo "$output" | grep -q 'decision'
+}
+
 @test "judge answers again — silence counter reset" {
   export HANDOFF_CTL_CMD=/nonexistent/controller
   run run_hook 'a'
