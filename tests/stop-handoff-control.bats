@@ -1022,9 +1022,10 @@ FLAG_OK='Removed video_h.
 
 # Burns API and is nondeterministic, hence gated. A mismatch is fixed in the rubric, not the hook.
 @test "live judge on the fixture corpus" {
-  [ -n "${HANDOFF_CTL_LIVE:-}" ] || skip "set HANDOFF_CTL_LIVE=1 and HANDOFF_CTL_API_KEY"
+  [ -n "${HANDOFF_CTL_LIVE:-}" ] || skip "set HANDOFF_CTL_LIVE=1 and HANDOFF_CTL_LIVE_KEY"
   unset HANDOFF_CTL_CMD
-  export HANDOFF_CTL_API_KEY="${HANDOFF_CTL_LIVE_KEY:-}"
+  export HANDOFF_CTL_API_KEY="${HANDOFF_CTL_LIVE_KEY:-}" HANDOFF_CTL_CALIB=0
+  [ -z "${HANDOFF_CTL_LIVE_URL:-}" ] || export HANDOFF_CTL_API_URL="$HANDOFF_CTL_LIVE_URL"
   export HANDOFF_CTL_TIMEOUT="${HANDOFF_CTL_TIMEOUT:-90}"
   local fails=0
   while IFS=$'\t' read -r name want; do

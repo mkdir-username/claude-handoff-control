@@ -45,7 +45,8 @@ claude-handoff-control installed to $DEST
 Hooks registered in $SETTINGS (backup saved next to it).
 
 Next: give the judge an API key, e.g. in your shell profile:
-  export HANDOFF_CTL_API_KEY=sk-ant-...      # falls back to ANTHROPIC_API_KEY
-Optional: HANDOFF_CTL_MODEL (default claude-haiku-4-5), HANDOFF_CTL_API_URL.
+  export DEEPSEEK_API_KEY=sk-...             # or HANDOFF_CTL_API_KEY
+Optional: HANDOFF_CTL_MODEL (default deepseek-flash), HANDOFF_CTL_API_URL — any Anthropic
+Messages–compatible endpoint.
 Restart Claude Code for the hooks to load.
 MSG
