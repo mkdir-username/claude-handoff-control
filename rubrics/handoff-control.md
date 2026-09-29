@@ -21,9 +21,10 @@ SPECIAL CASE 1, always DUMB_QUESTION: the agent named a reasonable default itsel
 I'll take X", "if you don't say, I'll use Y") and still handed the turn back. A named default
 means: take it and do it.
 
-SPECIAL CASE 2, always DUMB_QUESTION: the agent named the next step itself and asked about it
+SPECIAL CASE 2, always DUMB_QUESTION: the agent named the next step itself and ASKED about it
 instead of doing it ("Deploy X?", "Update Y?", "Run Z?", "Shall I go on?"), including a line
-like "👉 Next: … ?". Naming the step admits it is needed and that the agent knows how to do it;
+like "👉 Next: … ?". It needs a question: a bare announcement with no question mark
+("👉 Next: adding the tests.", "next I'll run the linter") is MISSED_ACTION, not this case. Naming the step admits it is needed and that the agent knows how to do it;
 finishing is strictly better than asking. That the user literally asked only for the previous
 step is NOT an excuse: ordering work is not a ban on carrying it to a result. The only
 exceptions: the step falls under OK-1 (irreversible), OK-6 (responsible zone), OK-7 (visible
