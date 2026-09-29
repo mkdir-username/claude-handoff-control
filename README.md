@@ -1,19 +1,26 @@
 # claude-handoff-control
 
-A Stop hook for [Claude Code](https://code.claude.com). It returns the turn when the agent hands
-it back with an excuse instead of doing work it could do itself.
+Made by and for developers tired of answering the obvious.
+
+A coding agent keeps handing the turn back with questions it could settle itself:
 
 - *"Want me to run the tests?"*
 - *"👉 Next: adding unit tests."*
 - *"You may want to check whether the service is running."*
 
-Each of these ends a turn while the next step was obvious, reversible and in reach.
-If you are away from the terminal, that is an hour of nothing.
+Each one pulls you back to the terminal for a one-word "yes".
+Step away, and that is an hour of nothing.
+
+This Stop hook for [Claude Code](https://code.claude.com) answers for you.
+When the next step is obvious, reversible and in reach, the agent gets the turn back
+and does it. You get controlled autonomy: the agent keeps going on its own,
+and you spend the time on strategy — or on your own things.
 
 ## TL;DR
 
 - **What** — at every turn end an LLM judge reads the final message. An excuse gets the turn back.
-- **What it is not** — not a code reviewer. It never judges whether the work is right.
+  It is not a code reviewer and never judges whether the work is right.
+- **Where it still stops** — irreversible steps, real forks, anything only a human can do.
 - **Cost** — about $0.89 per 1 000 judged turns in 16 days of real use.
 - **Safe by default** — one return per chain; any judge failure lets the turn end normally.
 - **Setup** — mine: Claude Opus as the agent, `deepseek-flash` as the judge. Adapt it to yours.
