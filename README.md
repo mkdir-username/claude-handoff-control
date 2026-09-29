@@ -10,6 +10,18 @@ within the agent's reach. If you are away from the terminal, that is an hour of 
 This hook is about **controlled proactivity**: push the agent to finish what it can, while keeping
 legitimate stops — irreversible actions, real forks, a human-only step, a policy ban — intact.
 
+## My setup, as it runs
+
+This is my personal setup published as-is, not a product tuned for every stack:
+
+- **Main agent:** Claude Opus in Claude Code.
+- **Controller (judge):** `deepseek-flash` through DeepSeek's Anthropic-compatible endpoint
+  (`https://api.deepseek.com/anthropic/v1/messages`). The rubrics were tuned on this pair.
+
+Take it as a starting point and adapt it to yours. Any Anthropic Messages–compatible judge plugs in
+with three variables (`HANDOFF_CTL_API_URL`, `HANDOFF_CTL_API_KEY`, `HANDOFF_CTL_MODEL`), but with
+another model expect to retune `rubrics/handoff-control.md` yourself — I have not.
+
 ## What it is — and what it is not
 
 It is a **turn-handoff controller, not a reviewer**. It asks exactly one question — *was the turn
@@ -68,7 +80,7 @@ Requires `bash`, `jq`, `curl`, `python3`, `perl`.
 git clone https://github.com/mkdir-username/claude-handoff-control.git
 cd claude-handoff-control
 ./install.sh
-export HANDOFF_CTL_API_KEY=sk-ant-...     # or ANTHROPIC_API_KEY; put it in your shell profile
+export DEEPSEEK_API_KEY=sk-...            # or HANDOFF_CTL_API_KEY; put it in your shell profile
 ```
 
 `install.sh` copies the hooks and rubrics to `~/.claude/handoff-control/`, backs up
@@ -80,9 +92,9 @@ idempotent and leaves your other hooks alone. Restart Claude Code afterwards.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `HANDOFF_CTL_API_KEY` | `$ANTHROPIC_API_KEY` | Key for the judge |
-| `HANDOFF_CTL_API_URL` | `https://api.anthropic.com/v1/messages` | Any Anthropic Messages–compatible endpoint |
-| `HANDOFF_CTL_MODEL` | `claude-haiku-4-5` | Judge model |
+| `HANDOFF_CTL_API_KEY` | `$DEEPSEEK_API_KEY` | Key for the judge |
+| `HANDOFF_CTL_API_URL` | `https://api.deepseek.com/anthropic/v1/messages` | Any Anthropic Messages–compatible endpoint |
+| `HANDOFF_CTL_MODEL` | `deepseek-flash` | Judge model |
 | `HANDOFF_CTL_TIMEOUT` | `40` | Judge request timeout, seconds |
 | `HANDOFF_CTL_THRESHOLD` | `0.90` | Confidence needed to return the turn |
 | `HANDOFF_CTL_SOFT_THRESHOLD` | `0.80` | Confidence needed for a next-turn lesson |
@@ -97,8 +109,9 @@ idempotent and leaves your other hooks alone. Restart Claude Code afterwards.
 | `HANDOFF_CTL_LOG` | `$HANDOFF_CTL_HOME/verdicts.jsonl` | Verdict log |
 | `HANDOFF_CTL_RUBRIC_DIR` | `<install>/rubrics` | Directory with the three rubrics |
 | `HANDOFF_CTL_RUBRIC` · `HANDOFF_CTL_OBLIGATION_RUBRIC` · `HANDOFF_CTL_CALIB_PROMPT` | files in the rubric dir | Override one rubric |
-| `HANDOFF_CTL_CALIB` | `0` | `1` enables the logprob calibrator (logged only, never changes a verdict) |
-| `HANDOFF_CTL_CALIB_URL` · `HANDOFF_CTL_CALIB_KEY` · `HANDOFF_CTL_CALIB_MODEL` · `HANDOFF_CTL_CALIB_TIMEOUT` | — | OpenAI-compatible endpoint returning `top_logprobs` |
+| `HANDOFF_CTL_CALIB` | `1` | Logprob calibrator on evasion verdicts (logged only, never changes a verdict); `0` turns it off |
+| `HANDOFF_CTL_CALIB_URL` | `https://api.deepseek.com/v1/chat/completions` | OpenAI-compatible endpoint returning `top_logprobs` |
+| `HANDOFF_CTL_CALIB_KEY` · `HANDOFF_CTL_CALIB_MODEL` · `HANDOFF_CTL_CALIB_TIMEOUT` | judge key · judge model · `10` | Calibrator overrides |
 | `HANDOFF_CTL_CMD` · `HANDOFF_CTL_CALIB_CMD` | — | Replace the judge/calibrator with a command (tests, custom transports) |
 | `HANDOFF_CTL_DOWN_FILE` | `$HANDOFF_CTL_HOME/state/ctl-down` | Consecutive-failure counter |
 
@@ -117,18 +130,23 @@ arguments and successful tool output are never sent. Nothing else leaves the mac
 
 ## Cost and latency
 
-Measured on the bundled fixture corpus with `claude-haiku-4-5`: about 2 800 input and 115 output
-tokens per judged turn, 2.5–6 s added to the end of the turn. At $1 / $5 per million tokens that
-is roughly **$0.0034 per turn, about $0.34 per 100 turns**. The judge runs once per turn end,
-plus once for a continuation after a block.
+Measured on the bundled fixture corpus with `deepseek-flash` (7 cases × 2): about 2 700 input tokens
+per judged turn, of which ~2 450 (the rubric) are served from DeepSeek's prompt cache after the
+first call, and 200–1 700 output tokens — most of it thinking before the verdict. The hook adds
+2–10 s to the end of the turn, typically 3–4 s. Evasion verdicts add one tiny calibrator call
+(4 output tokens). The judge runs once per turn end, plus once for a continuation after a block.
+Multiply by your DeepSeek rate for the price.
 
 ## Limitations
 
 - The judge sees only the current turn. Work done a turn earlier is invisible to it — hence the
   obligation ceiling and TTL.
-- Verdicts are LLM output: nondeterministic, and the two evasion classes blur with small models
-  (on Haiku a bare "👉 Next: …" announcement tends to come back as DUMB_QUESTION rather than
-  MISSED_ACTION). The turn is returned either way; only MISSED_ACTION opens an obligation.
+- Verdicts are LLM output and nondeterministic. On the fixture corpus `deepseek-flash` matched the
+  expected class in 13 of 14 runs; the miss was a legitimate irreversible fork judged
+  DUMB_QUESTION at 0.82 — below the block threshold, so it became a lesson, not a returned turn.
+- `deepseek-flash` thinks before it answers. Now and then the thinking uses up all 4 000
+  `max_tokens` and no verdict comes back (1 of 7 extra calls on the hardest fixture); that turn
+  passes unchecked, silently. Raise `max_tokens` in the hook if you see it often.
 - A false block costs you one Escape. The rubric deliberately leans towards blocking when in doubt;
   raise `HANDOFF_CTL_THRESHOLD` if that is too eager for you.
 - The rubric knows nothing about your project's policies beyond the common ones (no push, publish,
@@ -145,7 +163,7 @@ a stated goal before work starts, and work instead of excuses at the end of ever
 
 ```bash
 bats tests/                                   # judge stubbed via HANDOFF_CTL_CMD, no API calls
-HANDOFF_CTL_LIVE=1 HANDOFF_CTL_LIVE_KEY=sk-ant-... bats tests/stop-handoff-control.bats -f 'live judge'
+HANDOFF_CTL_LIVE=1 HANDOFF_CTL_LIVE_KEY="$DEEPSEEK_API_KEY" bats tests/stop-handoff-control.bats -f 'live judge'
 ```
 
 ## License
