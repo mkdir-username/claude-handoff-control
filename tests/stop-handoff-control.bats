@@ -11,7 +11,7 @@ setup() {
   ST="$HANDOFF_CTL_HOME/state"
   export HANDOFF_CTL_LOG="$BATS_TEST_TMPDIR/verdicts.jsonl"
   export HANDOFF_CTL_DOWN_FILE="$BATS_TEST_TMPDIR/ctl-down"
-  unset ANTHROPIC_API_KEY HANDOFF_CTL_API_KEY HANDOFF_CTL_CALIB HANDOFF_CTL_COMMIT_IN_DIALOG
+  unset ANTHROPIC_API_KEY DEEPSEEK_API_KEY HANDOFF_CTL_API_KEY HANDOFF_CTL_CALIB HANDOFF_CTL_COMMIT_IN_DIALOG
   mkdir -p "$ST" "$HANDOFF_CTL_HOME/prompts"
 }
 
@@ -261,9 +261,9 @@ PY
   [ "$(cat "$BATS_TEST_TMPDIR/hit")" = "/v1/messages sk-test-key 2023-06-01" ]
 }
 
-@test "ANTHROPIC_API_KEY is the fallback key" {
+@test "DEEPSEEK_API_KEY is the fallback key" {
   unset HANDOFF_CTL_CMD
-  export ANTHROPIC_API_KEY=sk-fallback NO_PROXY=127.0.0.1 no_proxy=127.0.0.1
+  export DEEPSEEK_API_KEY=sk-fallback NO_PROXY=127.0.0.1 no_proxy=127.0.0.1
   PORT=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
   export HANDOFF_CTL_API_URL="http://127.0.0.1:$PORT/v1/messages"
   timeout 15 python3 - "$PORT" "$BATS_TEST_TMPDIR/hit" 3>&- <<'PY' &
@@ -280,6 +280,27 @@ PY
   sleep 0.3
   run run_hook 'Continue?'
   [ "$(cat "$BATS_TEST_TMPDIR/hit")" = "sk-fallback" ]
+}
+
+@test "default judge request: deepseek-flash, max_tokens 4000" {
+  unset HANDOFF_CTL_CMD HANDOFF_CTL_MODEL
+  export HANDOFF_CTL_API_KEY=sk-test NO_PROXY=127.0.0.1 no_proxy=127.0.0.1
+  PORT=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
+  export HANDOFF_CTL_API_URL="http://127.0.0.1:$PORT/v1/messages"
+  timeout 15 python3 - "$PORT" "$BATS_TEST_TMPDIR/body" 3>&- <<'PY' &
+import http.server, sys
+port, out = int(sys.argv[1]), sys.argv[2]
+class H(http.server.BaseHTTPRequestHandler):
+    def do_POST(self):
+        open(out, 'wb').write(self.rfile.read(int(self.headers.get('content-length') or 0)))
+        self.send_response(200); self.end_headers(); self.wfile.write(b'{}')
+    def log_message(self, *a): pass
+http.server.HTTPServer(('127.0.0.1', port), H).handle_request()
+PY
+  sleep 0.3
+  run run_hook 'Continue?'
+  [ "$(jq -r .model "$BATS_TEST_TMPDIR/body")" = deepseek-flash ]
+  [ "$(jq -r .max_tokens "$BATS_TEST_TMPDIR/body")" = 4000 ]
 }
 
 @test "bypass file skips the judge once" {
@@ -818,7 +839,15 @@ mkcalib() {   # $1 = argmax token, $2 = its logprob, $3 = alternative logprob, $
 
 lastrec() { tail -1 "$HANDOFF_CTL_LOG"; }
 
-@test "calibrator is off by default" {
+@test "calibrator runs by default" {
+  mkcontrol "$(verdict MISSED_ACTION 0.95)"
+  mkcalib "yes" -0.002 -6.2
+  run run_hook 'will fix the fixture'
+  [ -f "$BATS_TEST_TMPDIR/calib-body.json" ]
+}
+
+@test "HANDOFF_CTL_CALIB=0 turns the calibrator off" {
+  export HANDOFF_CTL_CALIB=0
   mkcontrol "$(verdict MISSED_ACTION 0.95)"
   mkcalib "yes" -0.002 -6.2
   run run_hook 'will fix the fixture'

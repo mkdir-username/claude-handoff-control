@@ -22,9 +22,9 @@ STATE_DIR="$HANDOFF_CTL_HOME/state"
 HANDOFF_CTL_LOG="${HANDOFF_CTL_LOG:-$HANDOFF_CTL_HOME/verdicts.jsonl}"
 THRESHOLD="${HANDOFF_CTL_THRESHOLD:-0.90}"
 SOFT_THRESHOLD="${HANDOFF_CTL_SOFT_THRESHOLD:-0.80}"
-API_URL="${HANDOFF_CTL_API_URL:-https://api.anthropic.com/v1/messages}"
-API_KEY="${HANDOFF_CTL_API_KEY:-${ANTHROPIC_API_KEY:-}}"
-MODEL="${HANDOFF_CTL_MODEL:-claude-haiku-4-5}"
+API_URL="${HANDOFF_CTL_API_URL:-https://api.deepseek.com/anthropic/v1/messages}"
+API_KEY="${HANDOFF_CTL_API_KEY:-${DEEPSEEK_API_KEY:-}}"
+MODEL="${HANDOFF_CTL_MODEL:-deepseek-flash}"
 
 INPUT=$(cat)
 # shellcheck source=lib/stop-rewake-guard.sh
@@ -65,12 +65,12 @@ ask_controller() {
 
 # Optional calibrator. Self-reported confidence of an LLM judge clusters at 0.85/0.90/0.95 and
 # does not calibrate; a narrow yes/no question with reasoning off and top_logprobs gives a real
-# distribution. Needs an OpenAI-compatible endpoint that returns logprobs, so it is off by default
-# and only logged — it never changes the verdict.
+# distribution. Needs an OpenAI-compatible endpoint that returns logprobs (DeepSeek does); it is
+# only logged — it never changes the verdict.
 ask_calibrator() {
   if [ -n "${HANDOFF_CTL_CALIB_CMD:-}" ]; then "$HANDOFF_CTL_CALIB_CMD"; return; fi
-  [ -n "${HANDOFF_CTL_CALIB_URL:-}" ] || return 1
-  curl -s -m "${HANDOFF_CTL_CALIB_TIMEOUT:-10}" "$HANDOFF_CTL_CALIB_URL" \
+  [ -n "$API_KEY" ] || [ -n "${HANDOFF_CTL_CALIB_KEY:-}" ] || return 1
+  curl -s -m "${HANDOFF_CTL_CALIB_TIMEOUT:-10}" "${HANDOFF_CTL_CALIB_URL:-https://api.deepseek.com/v1/chat/completions}" \
     -H "Authorization: Bearer ${HANDOFF_CTL_CALIB_KEY:-$API_KEY}" \
     -H "content-type: application/json" --data-binary @-
 }
@@ -262,7 +262,7 @@ if [ "$CONTINUED" = "0" ] && [ -s "$OBL_FILE" ]; then
   OBL_BODY=$(jq -n --rawfile rubric "$OBL_RUBRIC" --rawfile final "$TMP_FINAL" \
     --arg model "$MODEL" --arg act "$OBL_ACTION" --arg prompt "${USER_PROMPT:-—}" \
     --arg tools "${TOOLS:-—}" --arg fails "${FAILS:-—}" \
-    '{model:$model, max_tokens:1000, system:$rubric,
+    '{model:$model, max_tokens:2000, system:$rubric,
       messages:[{role:"user", content:
         ("OPEN OBLIGATION FROM PREVIOUS TURN:\n<<<\n" + $act + "\n>>>\n\n" +
          "USER REQUEST THIS TURN:\n<<<\n" + $prompt + "\n>>>\n\n" +
@@ -327,10 +327,11 @@ and the turn will not be returned again." \
   exit 0
 fi
 
+# deepseek-flash spends tokens on thinking before the verdict
 BODY=$(jq -n --rawfile rubric "$RUBRIC" --rawfile final "$TMP_FINAL" \
   --arg model "$MODEL" --arg prompt "${USER_PROMPT:-—}" --arg tools "${TOOLS:-—}" \
   --arg waits "$WAITS" --arg wsum "$WAIT_SUM" --arg dur "${TURN_SEC:-0}" --arg fails "${FAILS:-—}" \
-  '{model:$model, max_tokens:1000, system:$rubric,
+  '{model:$model, max_tokens:4000, system:$rubric,
     messages:[{role:"user", content:
       ("USER REQUEST THIS TURN:\n<<<\n" + $prompt + "\n>>>\n\n" +
        "TOOLS CALLED THIS TURN: " + $tools + "\n\n" +
@@ -361,7 +362,7 @@ ACTION=$(echo "$VERDICT_JSON" | jq -r '.action // ""')
 CALIB=""; CALIB_STATUS=""; CALIB_PROMPT="${HANDOFF_CTL_CALIB_PROMPT:-$RUBRIC_DIR/calibrator.md}"
 case "$VERDICT" in
   MISSED_ACTION|DUMB_QUESTION)
-    if [ "${HANDOFF_CTL_CALIB:-0}" != "0" ] && [ -f "$CALIB_PROMPT" ]; then
+    if [ "${HANDOFF_CTL_CALIB:-1}" != "0" ] && [ -f "$CALIB_PROMPT" ]; then
       CALIB_BODY=$(jq -n --rawfile sys "$CALIB_PROMPT" --rawfile final "$TMP_FINAL" \
         --arg model "${HANDOFF_CTL_CALIB_MODEL:-$MODEL}" \
         --arg prompt "${USER_PROMPT:-—}" --arg tools "${TOOLS:-—}" \
